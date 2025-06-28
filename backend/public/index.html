@@ -1,61 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <style>
-      html, body {
-        background-color: #000;
-      }
-    </style>
+    <title>Dobble Game</title>
+    <link rel="stylesheet" href="/styles.css">
     <script src="https://cdn.socket.io/4.3.2/socket.io.min.js" integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
-    <script>
-      const socket = io('http://localhost:3300', {
-        withCredentials: true
-      });
-      socket.on('connect', function() {
-        // socket.emit('events', { test: 'test' });
-        // socket.emit('identity', 0, response =>
-        //   console.log('Identity:', response),
-        // );
-      });
-      socket.on('events', function(data) {
-        console.log('event', data);
-      });
-      socket.on('exception', function(data) {
-        console.log('event', data);
-      });
-      socket.on('disconnect', function() {
-        console.log('Disconnected');
-      });
-      socket.on('playerMove', function(data) {
-        console.log(data);
-      });
-
-      socket.on('handlePlayerUnblocked', function(data) {
-        console.log('handlePlayerUnblocked');
-      });
-
-      socket.on('gameState', function(data) {
-        console.log('gameState', data);
-      });
-
-      socket.on('stateChange', function(data) {
-        console.log('stateChange', data);
-      });
-
-      function handleButtonClick() {
-        socket.emit('move', null, response =>
-          console.log('move:', response),
-        );
-      }
-
-      function handleReadyClick() {
-        socket.emit('playerReady');
-      }
-    </script>
   </head>
 
   <body>
-    <Button onclick="handleButtonClick()">Click</Button>
-    <Button onclick="handleReadyClick()">Ready</Button>
+    <div class="container">
+      <h1>🎯 Dobble Game</h1>
+
+      <!-- Authentication Section -->
+      <div id="authSection" class="auth-section">
+        <h2>Authentication</h2>
+
+        <!-- Login Form -->
+        <div id="loginForm">
+          <h3>Login</h3>
+          <div class="form-group">
+            <label for="loginUsername">Username:</label>
+            <input type="text" id="loginUsername" placeholder="Enter username">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password:</label>
+            <input type="password" id="loginPassword" placeholder="Enter password">
+          </div>
+          <button onclick="login()">Login</button>
+          <button onclick="showRegisterForm()">Register Instead</button>
+          <div id="loginMessage"></div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" style="display: none;">
+          <h3>Register</h3>
+          <div class="form-group">
+            <label for="registerUsername">Username:</label>
+            <input type="text" id="registerUsername" placeholder="Enter username (min 3 characters)">
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">Password:</label>
+            <input type="password" id="registerPassword" placeholder="Enter password (min 6 characters)">
+          </div>
+          <button onclick="register()">Register</button>
+          <button onclick="showLoginForm()">Login Instead</button>
+          <div id="registerMessage"></div>
+        </div>
+      </div>
+
+      <!-- Game Section -->
+      <div id="gameSection" class="game-section">
+        <div class="user-info">
+          <strong>Welcome, <span id="username">Player</span>!</strong>
+          <button onclick="logout()" style="float: right;">Logout</button>
+        </div>
+
+        <h2>Game Controls</h2>
+        <button onclick="handleButtonClick()" id="moveButton">Make Move</button>
+        <button onclick="handleReadyClick()" id="readyButton">Ready</button>
+
+        <h3>Game State</h3>
+        <div id="gameState" class="game-info">Waiting for game state...</div>
+
+        <h3>Game Log</h3>
+        <div id="gameLog" class="game-info"></div>
+      </div>
+    </div>
+
+    <script>
+      let socket = null;
+      let currentUser = null;
+
+      // Check if user is already authenticated
+      async function checkAuth() {
+        try {
+          const response = await fetch('http://localhost:3300/auth/me', {
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              currentUser = data.user;
+              showGameSection();
+              initializeSocket();
+            }
+          }
+        } catch (error) {
+          console.log('Not authenticated');
+        }
+      }
+
+      function showLoginForm() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+      }
+
+      function showRegisterForm() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+      }
+
+      async function register() {
+        const username = document.getElementById('registerUsername').value;
+        const password = document.getElementById('registerPassword').value;
+        const messageDiv = document.getElementById('registerMessage');
+
+        try {
+          const response = await fetch('http://localhost:3300/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            messageDiv.innerHTML = `<div class="success">${data.message}</div>`;
+            showLoginForm();
+          } else {
+            messageDiv.innerHTML = `<div class="error">${data.message}</div>`;
+          }
+        } catch (error) {
+          messageDiv.innerHTML = '<div class="error">Registration failed</div>';
+        }
+      }
+
+      async function login() {
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        const messageDiv = document.getElementById('loginMessage');
+
+        try {
+          const response = await fetch('http://localhost:3300/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            currentUser = data.user;
+            messageDiv.innerHTML = `<div class="success">${data.message}</div>`;
+            showGameSection();
+            initializeSocket();
+          } else {
+            messageDiv.innerHTML = `<div class="error">${data.message}</div>`;
+          }
+        } catch (error) {
+          messageDiv.innerHTML = '<div class="error">Login failed</div>';
+        }
+      }
+
+      async function logout() {
+        try {
+          await fetch('http://localhost:3300/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          currentUser = null;
+          if (socket) {
+            socket.disconnect();
+            socket = null;
+          }
+
+          showAuthSection();
+        } catch (error) {
+          console.error('Logout failed:', error);
+        }
+      }
+
+      function showAuthSection() {
+        document.getElementById('authSection').style.display = 'block';
+        document.getElementById('gameSection').style.display = 'none';
+      }
+
+      function showGameSection() {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('gameSection').style.display = 'block';
+        document.getElementById('username').textContent = currentUser.username;
+      }
+
+      function initializeSocket() {
+        socket = io('http://localhost:3300', {
+          withCredentials: true
+        });
+
+        socket.on('connect', function() {
+          console.log('Connected to game server');
+          addToGameLog('Connected to game server');
+        });
+
+        socket.on('events', function(data) {
+          console.log('event', data);
+          addToGameLog(`Event: ${JSON.stringify(data)}`);
+        });
+
+        socket.on('exception', function(data) {
+          console.log('exception', data);
+          addToGameLog(`Exception: ${JSON.stringify(data)}`);
+        });
+
+        socket.on('disconnect', function() {
+          console.log('Disconnected');
+          addToGameLog('Disconnected from game server');
+        });
+
+        socket.on('playerMove', function(data) {
+          console.log(data);
+          addToGameLog(`Player move: ${data}`);
+        });
+
+        socket.on('handlePlayerUnblocked', function(data) {
+          console.log('Player unblocked');
+          addToGameLog('Player unblocked');
+        });
+
+        socket.on('gameState', function(data) {
+          console.log('gameState', data);
+          document.getElementById('gameState').textContent = JSON.stringify(data, null, 2);
+        });
+
+        socket.on('stateChange', function(data) {
+          console.log('stateChange', data);
+          document.getElementById('gameState').textContent = JSON.stringify(data, null, 2);
+        });
+      }
+
+      function handleButtonClick() {
+        if (socket) {
+          socket.emit('move', null, response =>
+            console.log('move:', response),
+          );
+        }
+      }
+
+      function handleReadyClick() {
+        if (socket) {
+          socket.emit('playerReady');
+        }
+      }
+
+      function addToGameLog(message) {
+        const gameLog = document.getElementById('gameLog');
+        const timestamp = new Date().toLocaleTimeString();
+        gameLog.textContent += `[${timestamp}] ${message}\n`;
+        gameLog.scrollTop = gameLog.scrollHeight;
+      }
+
+      // Initialize on page load
+      checkAuth();
+    </script>
   </body>
 </html>
