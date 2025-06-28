@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style>
+      html, body {
+        background-color: #000;
+      }
+    </style>
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js" integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
+    <script>
+      const socket = io('http://localhost:3300', {
+        withCredentials: true
+      });
+      socket.on('connect', function() {
+        // socket.emit('events', { test: 'test' });
+        // socket.emit('identity', 0, response =>
+        //   console.log('Identity:', response),
+        // );
+      });
+      socket.on('events', function(data) {
+        console.log('event', data);
+      });
+      socket.on('exception', function(data) {
+        console.log('event', data);
+      });
+      socket.on('disconnect', function() {
+        console.log('Disconnected');
+      });
+      socket.on('playerMove', function(data) {
+        console.log(data);
+      });
+
+      socket.on('handlePlayerUnblocked', function(data) {
+        console.log('handlePlayerUnblocked');
+      });
+
+      socket.on('gameState', function(data) {
+        console.log('gameState', data);
+      });
+
+      socket.on('stateChange', function(data) {
+        console.log('stateChange', data);
+      });
+
+      function handleButtonClick() {
+        socket.emit('move', null, response =>
+          console.log('move:', response),
+        );
+      }
+
+      function handleReadyClick() {
+        socket.emit('playerReady');
+      }
+    </script>
+  </head>
+
+  <body>
+    <Button onclick="handleButtonClick()">Click</Button>
+    <Button onclick="handleReadyClick()">Ready</Button>
+  </body>
+</html>

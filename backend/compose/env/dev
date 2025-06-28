@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export PORT=3300
+export POSTGRES_DATA_DIR=~/docker-pg-dobble
+export POSTGRES_PORT=5462
+export POSTGRES_USER=dobble
+export POSTGRES_PASSWORD=/9XhVObe9W6M/MfTnuGM8nYgQlg1civlF4o/a0rJDRI=
+export NODE_ENV=development
