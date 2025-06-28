@@ -4,6 +4,7 @@ import * as cookieParser from 'cookie-parser';
 import * as session from 'express-session';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as passport from 'passport';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -40,6 +41,10 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Initialize Passport
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  await app.listen(process.env.PORT ?? 3300);
 }
 void bootstrap();

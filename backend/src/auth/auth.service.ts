@@ -10,7 +10,20 @@ export interface User {
 
 @Injectable()
 export class AuthService {
-  private users: User[] = [];
+  private users: User[] = [
+    {
+      id: '1',
+      username: 'TestUser 1',
+      password: bcrypt.hashSync('qweqwe', 10),
+      createdAt: new Date(),
+    },
+    {
+      id: '2',
+      username: 'TestUser 2',
+      password: bcrypt.hashSync('qweqwe', 10),
+      createdAt: new Date(),
+    },
+  ];
   private sessions: Map<string, { userId: string; username: string }> =
     new Map();
 

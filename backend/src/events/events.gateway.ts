@@ -14,7 +14,15 @@ import { map } from 'rxjs/operators';
 import { Server, Socket } from 'socket.io';
 import { game } from './game';
 import { Logger } from '@nestjs/common';
-import { AuthService } from '../auth/auth.service';
+
+interface SessionData {
+  passport?: {
+    user?: {
+      id: string;
+      username: string;
+    };
+  };
+}
 
 @WebSocketGateway({
   cors: {
@@ -30,7 +38,7 @@ export class EventsGateway
 
   private readonly logger = new Logger(EventsGateway.name);
 
-  constructor(private readonly authService: AuthService) {
+  constructor() {
     game.on('playerUnblocked', this.handlePlayerUnblocked);
     game.on('stateChange', this.handleStateChange);
   }
@@ -40,6 +48,13 @@ export class EventsGateway
   }
 
   getClientId(client: Socket): string {
+    // Try to get user from session
+    const session = (client.request as any).session as SessionData;
+    if (session?.passport?.user?.id) {
+      return session.passport.user.id;
+    }
+
+    // Fallback to device_id for anonymous users
     const cookiesArr = (client.handshake.headers.cookie || '').split(';');
     const cookies = cookiesArr.reduce((acc, cur) => {
       const [key, value] = cur.split('=');
@@ -47,37 +62,15 @@ export class EventsGateway
       return acc;
     }, {});
 
-    // Try to get session ID from cookies
-    const sessionId = cookies['connect.sid'] as string;
-
-    if (sessionId) {
-      // Get user from session
-      const session = this.authService.getSession(sessionId);
-      if (session) {
-        return session.userId;
-      }
-    }
-
-    // Fallback to device_id for anonymous users
     const deviceId = cookies['device_id'] as string;
     return deviceId || client.id;
   }
 
   getClientUsername(client: Socket): string {
-    const cookiesArr = (client.handshake.headers.cookie || '').split(';');
-    const cookies = cookiesArr.reduce((acc, cur) => {
-      const [key, value] = cur.split('=');
-      acc[(key || '').trim()] = (value || '').trim();
-      return acc;
-    }, {});
-
-    const sessionId = cookies['connect.sid'] as string;
-
-    if (sessionId) {
-      const session = this.authService.getSession(sessionId);
-      if (session) {
-        return session.username;
-      }
+    // Try to get user from session
+    const session = (client.request as any).session as SessionData;
+    if (session?.passport?.user?.username) {
+      return session.passport.user.username;
     }
 
     return `Player ${client.id.slice(0, 6)}`;

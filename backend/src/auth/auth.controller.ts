@@ -1,6 +1,16 @@
-import { Controller, Post, Body, Res, Req, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Req,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { Response, Request } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, User } from './auth.service';
+import { LocalStrategy } from './passport.strategy';
+import { AuthenticatedGuard, NotAuthenticatedGuard } from './auth.guard';
 
 interface RegisterDto {
   username: string;
@@ -12,11 +22,19 @@ interface LoginDto {
   password: string;
 }
 
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
+
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly localStrategy: LocalStrategy,
+  ) {}
 
   @Post('register')
+  @UseGuards(NotAuthenticatedGuard)
   async register(@Body() registerDto: RegisterDto, @Res() res: Response) {
     const { username, password } = registerDto;
 
@@ -51,10 +69,11 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(NotAuthenticatedGuard)
   async login(
     @Body() loginDto: LoginDto,
     @Res() res: Response,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
     const { username, password } = loginDto;
 
@@ -65,34 +84,48 @@ export class AuthController {
       });
     }
 
-    const result = await this.authService.login(username, password);
+    try {
+      // Use Passport strategy to validate credentials
+      const user = await this.localStrategy.validate(username, password);
 
-    if (result.success && result.user?.id && result.user?.username) {
-      // Create session
-      const sessionId = req.sessionID || `temp_${Date.now()}`;
-      this.authService.createSession(
-        sessionId,
-        result.user.id,
-        result.user.username,
-      );
+      if (user) {
+        // Log in the user with Passport
+        req.login(user, (err) => {
+          if (err) {
+            return res.status(500).json({
+              success: false,
+              message: 'Login failed',
+            });
+          }
 
-      return res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        user: result.user,
+          return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            user: {
+              id: user.id,
+              username: user.username,
+              createdAt: user.createdAt,
+            },
+          });
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials',
+        });
+      }
+    } catch {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
       });
-    } else {
-      return res.status(401).json(result);
     }
   }
 
   @Post('logout')
-  logout(@Req() req: Request, @Res() res: Response) {
-    if (req.sessionID) {
-      this.authService.removeSession(req.sessionID);
-    }
-
-    req.session.destroy((err) => {
+  @UseGuards(AuthenticatedGuard)
+  logout(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    req.logout((err) => {
       if (err) {
         return res
           .status(500)
@@ -106,22 +139,9 @@ export class AuthController {
   }
 
   @Get('me')
-  getCurrentUser(@Req() req: Request, @Res() res: Response) {
-    if (!req.sessionID) {
-      return res
-        .status(401)
-        .json({ success: false, message: 'Not authenticated' });
-    }
-
-    const session = this.authService.getSession(req.sessionID);
-
-    if (!session) {
-      return res
-        .status(401)
-        .json({ success: false, message: 'Session not found' });
-    }
-
-    const user = this.authService.getUserById(session.userId);
+  @UseGuards(AuthenticatedGuard)
+  getCurrentUser(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const user = req.user;
 
     if (!user) {
       return res
