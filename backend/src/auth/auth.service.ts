@@ -8,6 +8,12 @@ export interface User {
   createdAt: Date;
 }
 
+export interface SessionUser {
+  id: string;
+  username: string;
+  createdAt: Date;
+}
+
 @Injectable()
 export class AuthService {
   private users: User[] = [
@@ -30,7 +36,7 @@ export class AuthService {
   async register(
     username: string,
     password: string,
-  ): Promise<{ success: boolean; message: string; user?: Partial<User> }> {
+  ): Promise<{ success: boolean; message: string; user?: SessionUser }> {
     // Check if username already exists
     if (this.users.find((user) => user.username === username)) {
       return { success: false, message: 'Username already exists' };
@@ -63,7 +69,7 @@ export class AuthService {
   async login(
     username: string,
     password: string,
-  ): Promise<{ success: boolean; message: string; user?: Partial<User> }> {
+  ): Promise<{ success: boolean; message: string; user?: SessionUser }> {
     const user = this.users.find((u) => u.username === username);
 
     if (!user) {

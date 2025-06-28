@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { AuthService, User } from './auth.service';
+import { AuthService } from './auth.service';
 import { LocalStrategy } from './passport.strategy';
 import { AuthenticatedGuard, NotAuthenticatedGuard } from './auth.guard';
 
@@ -20,10 +20,6 @@ interface RegisterDto {
 interface LoginDto {
   username: string;
   password: string;
-}
-
-interface AuthenticatedRequest extends Request {
-  user?: User;
 }
 
 @Controller('auth')
@@ -73,7 +69,7 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Res() res: Response,
-    @Req() req: AuthenticatedRequest,
+    @Req() req: Request,
   ) {
     const { username, password } = loginDto;
 
@@ -124,7 +120,7 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(AuthenticatedGuard)
-  logout(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+  logout(@Req() req: Request, @Res() res: Response) {
     req.logout((err) => {
       if (err) {
         return res
@@ -140,7 +136,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(AuthenticatedGuard)
-  getCurrentUser(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+  getCurrentUser(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
 
     if (!user) {

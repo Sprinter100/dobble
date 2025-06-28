@@ -5,7 +5,8 @@ import { Request } from 'express';
 export class AuthenticatedGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    return request.isAuthenticated();
+    // Check if user exists in request (set by Passport)
+    return !!request.user;
   }
 }
 
@@ -13,6 +14,7 @@ export class AuthenticatedGuard implements CanActivate {
 export class NotAuthenticatedGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    return !request.isAuthenticated();
+    // Check if user does NOT exist in request
+    return !request.user;
   }
 }

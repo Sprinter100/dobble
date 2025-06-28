@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
-import { AuthService, User } from './auth.service';
+import { AuthService, SessionUser } from './auth.service';
 
 @Injectable()
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -11,11 +11,14 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     super();
   }
 
-  async validate(username: string, password: string): Promise<User | null> {
+  async validate(
+    username: string,
+    password: string,
+  ): Promise<SessionUser | null> {
     const result = await this.authService.login(username, password);
 
     if (result.success && result.user) {
-      return result.user as User;
+      return result.user;
     }
 
     return null;

@@ -14,6 +14,7 @@ import { map } from 'rxjs/operators';
 import { Server, Socket } from 'socket.io';
 import { game } from './game';
 import { Logger } from '@nestjs/common';
+import { IncomingMessage } from 'http';
 
 interface SessionData {
   passport?: {
@@ -22,6 +23,11 @@ interface SessionData {
       username: string;
     };
   };
+}
+
+// Extend IncomingMessage to include session
+interface AuthenticatedRequest extends IncomingMessage {
+  session?: SessionData;
 }
 
 @WebSocketGateway({
@@ -49,7 +55,8 @@ export class EventsGateway
 
   getClientId(client: Socket): string {
     // Try to get user from session
-    const session = (client.request as any).session as SessionData;
+    const request = client.request as AuthenticatedRequest;
+    const session = request.session;
     if (session?.passport?.user?.id) {
       return session.passport.user.id;
     }
@@ -68,7 +75,8 @@ export class EventsGateway
 
   getClientUsername(client: Socket): string {
     // Try to get user from session
-    const session = (client.request as any).session as SessionData;
+    const request = client.request as AuthenticatedRequest;
+    const session = request.session;
     if (session?.passport?.user?.username) {
       return session.passport.user.username;
     }

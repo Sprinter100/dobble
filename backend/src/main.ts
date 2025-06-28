@@ -45,6 +45,15 @@ async function bootstrap() {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Configure Passport serialization
+  passport.serializeUser((user: any, done) => {
+    done(null, user);
+  });
+
+  passport.deserializeUser((user: any, done) => {
+    done(null, user);
+  });
+
   await app.listen(process.env.PORT ?? 3300);
 }
 void bootstrap();
