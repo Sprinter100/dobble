@@ -11,7 +11,11 @@ export class SessionMiddleware implements NestMiddleware {
     if (req.sessionID) {
       const session = this.authService.getSession(req.sessionID);
       if (session) {
-        req['user'] = session;
+        req['user'] = {
+          id: session.userId,
+          username: session.username,
+          createdAt: new Date(),
+        };
       }
     }
     next();
