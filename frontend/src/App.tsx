@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import './App.css';
 import { AuthSection } from './components/AuthSection';
 import { GameSection } from './components/GameSection';
 import type { User } from './types/auth';

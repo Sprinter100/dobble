@@ -1,5 +1,9 @@
 import * as EventEmitter from 'node:events';
 
+const MIN_PLAYERS_TO_PLAY = 2;
+const MAX_TIMEOUT_MS = 2000;
+const MAX_PLAYER_TURNS = 27;
+
 enum Turn {
   A = 'A',
   B = 'B',
@@ -31,18 +35,30 @@ enum Turn {
 
 const turnValues = Object.values(Turn);
 
-type Plyer = {
+type Player = {
   id: string;
   name: string;
-  moves: number;
+  timeoutDate: number;
+  turns: number;
   hand: Turn[];
-  canMove: boolean;
   isReady: boolean;
 };
 
-type State = {
-  players: Plyer[];
+type State =
+  | 'WAITING_FOR_PLAYERS'
+  | 'PREPARE_INITIAL_ROUND'
+  | 'WAIT_FOR_PLAYER_MOVE'
+  | 'PREPARE_NEXT_ROUND'
+  | 'RESULTS';
+
+type GameState = {
+  state: State;
+  players: Player[];
   currentTurn: Turn[];
+  meta: {
+    maxTimeoutMs: number;
+    maxPlayerTurns: number;
+  };
 };
 
 function getGameHand(count: number = 6): Turn[] {
@@ -70,86 +86,198 @@ function getPlayerHand(gameHand: Turn[], count: number = 6): Turn[] {
   return res;
 }
 
+const initialPlayerData: Player = {
+  id: '',
+  name: '',
+  timeoutDate: 0,
+  turns: MAX_PLAYER_TURNS,
+  isReady: false,
+  hand: [],
+};
+
 class Game extends EventEmitter {
-  state: State = {
+  state: GameState = {
+    state: 'WAITING_FOR_PLAYERS',
     players: [],
     currentTurn: [],
+    meta: {
+      maxTimeoutMs: MAX_TIMEOUT_MS,
+      maxPlayerTurns: MAX_PLAYER_TURNS,
+    },
   };
 
-  getState() {
-    return this.state;
-  }
+  init() {
+    this.state.state = 'WAITING_FOR_PLAYERS';
 
-  startGame() {
-    const gameHand = getGameHand();
+    this.resetPlayers();
 
-    this.state.currentTurn = gameHand;
-
-    this.state.players.forEach((player) => {
-      player.canMove = true;
-      player.hand = getPlayerHand(gameHand);
-    });
-
-    this.sendStateChange();
-  }
-
-  findPlayerById(id: string) {
-    return this.state.players.find((player) => player.id === id);
+    if (this.canStartGame()) {
+      this.prepareInitialRound();
+    }
   }
 
   addPlayer(id: string) {
+    if (this.state.state !== 'WAITING_FOR_PLAYERS') {
+      return;
+    }
+
     if (this.findPlayerById(id)) {
       return;
     }
 
-    this.state.players.push({
+    const player: Player = {
+      ...initialPlayerData,
       id,
       name: `Player ${this.state.players.length + 1}`,
-      moves: 0,
-      canMove: false,
-      isReady: false,
-      hand: [],
-    });
-  }
+    };
 
-  removePlayer(id: string) {
-    this.state.players.filter((player) => player.id !== id);
+    this.state.players.push(player);
+
+    return player;
   }
 
   playerReady(id: string) {
+    if (this.state.state !== 'WAITING_FOR_PLAYERS') {
+      return;
+    }
+
+    const player = this.findPlayerById(id);
+
+    if (!player || player.isReady) {
+      return;
+    }
+
+    player.isReady = true;
+
+    if (this.canStartGame()) {
+      this.prepareInitialRound();
+    } else {
+      this.sendGameState();
+    }
+  }
+
+  move(id: string, data: Turn) {
+    if (this.state.state !== 'WAIT_FOR_PLAYER_MOVE') {
+      return;
+    }
+
     const player = this.findPlayerById(id);
 
     if (!player) {
       return;
     }
 
-    player.isReady = true;
-
-    if (this.areAllPlayersReady()) {
-      this.startGame();
-    } else {
-      this.sendStateChange();
+    if (this.isPlayerTimedOut(player)) {
+      return;
     }
+
+    this.removeTimeoutFromPlayer(player);
+
+    if (!this.isCorrectMove(player, data)) {
+      this.addTimeoutToPlayer(player);
+      this.sendGameState();
+
+      return;
+    }
+
+    this.addScoreToPlayer(player);
+
+    if (this.hasPlayerWon(player)) {
+      this.state.state = 'RESULTS';
+      this.sendGameState();
+
+      return;
+    }
+
+    this.prepareNextRound(player);
   }
 
-  areAllPlayersReady() {
+  getState() {
+    return JSON.parse(JSON.stringify(this.state)) as typeof this.state;
+  }
+
+  removePlayer(id: string) {
+    this.state.players.filter((player) => player.id !== id);
+  }
+
+  private addScoreToPlayer(player: Player) {
+    player.turns -= 1;
+  }
+
+  private hasPlayerWon(player: Player) {
+    return player.turns <= 0;
+  }
+
+  private isCorrectMove(player: Player, data: Turn) {
+    return player.hand.includes(data) && this.state.currentTurn.includes(data);
+  }
+
+  private prepareInitialRound() {
+    this.state.state = 'PREPARE_INITIAL_ROUND';
+    this.sendGameState();
+
+    const gameHand = getGameHand();
+
+    this.state.currentTurn = gameHand;
+
+    this.state.players.forEach((player) => {
+      player.hand = getPlayerHand(gameHand);
+    });
+
+    this.state.state = 'WAIT_FOR_PLAYER_MOVE';
+    this.sendGameState();
+  }
+
+  private prepareNextRound(roundWinner: Player) {
+    this.state.state = 'PREPARE_NEXT_ROUND';
+    this.sendGameState();
+
+    this.state.currentTurn = [...roundWinner.hand];
+    roundWinner.hand = getPlayerHand(roundWinner.hand);
+
+    this.state.state = 'WAIT_FOR_PLAYER_MOVE';
+    this.sendGameState();
+  }
+
+  private findPlayerById(id: string) {
+    return this.state.players.find((player) => player.id === id);
+  }
+
+  private resetPlayers() {
+    this.state.players.forEach((player) => ({
+      ...initialPlayerData,
+      id: player.id,
+      name: player.name,
+    }));
+  }
+
+  private canStartGame() {
+    return (
+      this.state.players.length >= MIN_PLAYERS_TO_PLAY &&
+      this.areAllPlayersReady()
+    );
+  }
+
+  private areAllPlayersReady() {
     return this.state.players.every((player) => player.isReady);
   }
 
-  move(id: string) {
-    const player = this.state.players.find((player) => player.id === id);
-
-    setTimeout(this.unblockPlayer, 1000);
-
-    return player ? ++player.moves : null;
+  private isPlayerTimedOut(player: Player) {
+    return (
+      !!player.timeoutDate && Date.now() - player.timeoutDate < MAX_TIMEOUT_MS
+    );
   }
 
-  unblockPlayer = () => {
-    this.emit('playerUnblocked');
-  };
+  private addTimeoutToPlayer(player: Player) {
+    player.timeoutDate = Date.now();
+  }
 
-  sendStateChange = () => {
-    this.emit('stateChange', this.getState());
+  private removeTimeoutFromPlayer(player: Player) {
+    player.timeoutDate = 0;
+  }
+
+  private sendGameState = () => {
+    this.emit('gameState', this.getState());
   };
 }
 

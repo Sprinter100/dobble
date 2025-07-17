@@ -1,0 +1,58 @@
+WAITING_FOR_PLAYERS
+  Allows players to join
+
+  Accepts messages:
+    player_ready :player_id
+
+  After every player is ready -> go to DEAL_INITIAL_ROUND
+
+DEAL_INITIAL_ROUND
+  send "game state" msg
+  Generate current hand
+  Generate players hands
+
+  Accepts messages:
+    -
+
+  go to WAIT_FOR_PLAYER_MOVE
+
+WAIT_FOR_PLAYER_MOVE
+  send "game state" msg
+
+  Accepts messages:
+    move :player_id, :move_value
+
+  on message move:
+    if player is blocked -> do nothing
+    if player is timed out:
+      if Date.now - timeout_time > TIMEOUT_TIME
+        remove timeout
+        go to "if player is not blocked"
+    if player is not blocked:
+      Send "player moved" :player_id msg
+      if move is correct:
+        block all players
+        Add point to player
+        decrease player's player's cards_left count
+        if player's cards_left count <= 0:
+          go to RESULTS
+        else:
+          go to DEAL_NEXT_ROUND :player_id (winning player id)
+      if move is NOT correct:
+        add timeout_time value
+        Send "incorrect move" :player_id msg
+
+DEAL_NEXT_ROUND (:move_value)
+  send "game state" msg
+  Assign winning player's hand as current hand
+  Generate winning player hands
+
+  Accepts messages:
+    -
+
+  go to WAIT_FOR_PLAYER_MOVE
+
+RESULTS
+  send "game state" msg
+  Accepts messages:
+  -

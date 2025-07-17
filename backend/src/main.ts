@@ -1,10 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
-import * as session from 'express-session';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as passport from 'passport';
+import { sessionMiddleware } from 'src/middlewares/session';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -26,20 +26,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Session middleware
-  app.use(
-    session({
-      secret:
-        process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax',
-      },
-    }),
-  );
+  app.use(sessionMiddleware);
 
   // Initialize Passport
   app.use(passport.initialize());

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { User } from '../types/auth';
+import { CurrentTurnButtons } from './CurrentTurnButtons';
 
 interface GameSectionProps {
   currentUser: User;
@@ -11,24 +12,42 @@ interface GameState {
   players: Array<{
     id: string;
     name: string;
-    moves: number;
     hand: string[];
-    canMove: boolean;
     isReady: boolean;
+    turns: number;
+    timeoutDate: number;
   }>;
   currentTurn: string[];
+  state: string;
+  meta: {
+    maxTimeoutMs: number;
+    maxPlayerTurns: number;
+  };
 }
 
 export function GameSection({ currentUser, onLogout }: GameSectionProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [gameLog, setGameLog] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [clentId, setClientid] = useState('');
+  const [isTimedOut, setIsTimedOut] = useState(false);
 
-  const addToGameLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setGameLog(prev => [...prev, `[${timestamp}] ${message}`]);
-  };
+  const maxTimeoutMs = gameState?.meta.maxTimeoutMs || 0;
+  const currentPlayer = gameState?.players.find((player) => player.id === clentId);
+  const hasTimeoutDate = !!currentPlayer?.timeoutDate && Date.now() - currentPlayer?.timeoutDate < maxTimeoutMs;
+  const isReady = currentPlayer?.isReady;
+
+  useEffect(() => {
+    let timeoutId: number;
+
+    if (hasTimeoutDate) {
+      setIsTimedOut(true);
+
+      timeoutId = setTimeout(() => setIsTimedOut(false), maxTimeoutMs);
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [hasTimeoutDate, maxTimeoutMs])
 
   const handleLogout = async () => {
     try {
@@ -46,19 +65,18 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
     }
   };
 
-  const handleMove = () => {
-    if (socket) {
-      socket.emit('move', null, (response: unknown) => {
-        console.log('move:', response);
-      });
-    }
-  };
-
   const handleReady = () => {
     if (socket) {
       socket.emit('playerReady');
     }
   };
+
+  const handleLetterClick = (letter: string) => {
+    console.log('Selected letter:', letter);
+    if (socket) {
+      socket.emit('move', letter);
+    }
+  }
 
   useEffect(() => {
     const newSocket = io('/', {
@@ -68,43 +86,31 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
     newSocket.on('connect', () => {
       console.log('Connected to game server');
       setIsConnected(true);
-      addToGameLog('Connected to game server');
     });
 
     newSocket.on('disconnect', () => {
       console.log('Disconnected');
       setIsConnected(false);
-      addToGameLog('Disconnected from game server');
     });
 
     newSocket.on('playerMove', (data: string) => {
       console.log(data);
-      addToGameLog(`Player move: ${data}`);
     });
 
-    newSocket.on('handlePlayerUnblocked', () => {
-      console.log('Player unblocked');
-      addToGameLog('Player unblocked');
+    newSocket.on('clientId', (clientId: string) => {
+      handleClientId(clientId);
     });
 
     newSocket.on('gameState', (data: GameState) => {
-      console.log('gameState', data);
-      setGameState(data);
-    });
-
-    newSocket.on('stateChange', (data: GameState) => {
-      console.log('stateChange', data);
-      setGameState(data);
+      handleGameState(data);
     });
 
     newSocket.on('events', (data: unknown) => {
       console.log('event', data);
-      addToGameLog(`Event: ${JSON.stringify(data)}`);
     });
 
     newSocket.on('exception', (data: unknown) => {
       console.log('exception', data);
-      addToGameLog(`Exception: ${JSON.stringify(data)}`);
     });
 
     setSocket(newSocket);
@@ -114,6 +120,16 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
       newSocket.disconnect();
     };
   }, []);
+
+  const handleGameState = (data: GameState) => {
+    console.log('gameStateChange', data);
+    setGameState(data);
+  }
+
+  const handleClientId = (clientId: string) => {
+    console.log(clientId);
+    setClientid(clientId)
+  }
 
   return (
     <div className="row">
@@ -137,16 +153,9 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
             <h2 className="h4 mb-3">Game Controls</h2>
             <div className="d-flex gap-2">
               <button
-                onClick={handleMove}
-                className="btn btn-primary"
-                disabled={!isConnected}
-              >
-                Make Move
-              </button>
-              <button
                 onClick={handleReady}
                 className="btn btn-success"
-                disabled={!isConnected}
+                disabled={!isConnected || isReady}
               >
                 Ready
               </button>
@@ -159,36 +168,30 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
           </div>
         </div>
 
-        {/* Game State */}
+        {/* Dealt Hand */}
         <div className="card bg-dark border-secondary mb-4">
           <div className="card-body">
-            <h3 className="h5 mb-3">Game State</h3>
-            <pre className="bg-dark text-white border border-secondary p-3 rounded" style={{ maxHeight: '300px', overflow: 'auto' }}>
-              {gameState ? JSON.stringify(gameState, null, 2) : 'Waiting for game state...'}
-            </pre>
+            <h2 className="h4 mb-3">Dealt Hand</h2>
+            <div className="d-flex gap-2">
+              <CurrentTurnButtons
+                isDisabled={isTimedOut}
+                letters={gameState?.currentTurn ?? []}
+                onLetterClick={handleLetterClick}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Game Log */}
-        <div className="card bg-dark border-secondary">
+        {/* Current Turn */}
+        <div className="card bg-dark border-secondary mb-4">
           <div className="card-body">
-            <h3 className="h5 mb-3">Game Log</h3>
-            <div
-              className="bg-dark text-white border border-secondary p-3 rounded"
-              style={{
-                maxHeight: '300px',
-                overflow: 'auto',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem'
-              }}
-            >
-              {gameLog.length > 0 ? (
-                gameLog.map((log, index) => (
-                  <div key={index}>{log}</div>
-                ))
-              ) : (
-                <div>No game events yet...</div>
-              )}
+            <h2 className="h4 mb-3">Current Turn</h2>
+            <div className="d-flex gap-2">
+              <CurrentTurnButtons
+                isDisabled={isTimedOut}
+                letters={currentPlayer?.hand ?? []}
+                onLetterClick={handleLetterClick}
+              />
             </div>
           </div>
         </div>

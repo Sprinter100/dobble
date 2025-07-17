@@ -14,22 +14,8 @@ import { map } from 'rxjs/operators';
 import { Server, Socket } from 'socket.io';
 import { game } from './game';
 import { Logger } from '@nestjs/common';
-import { IncomingMessage } from 'http';
-
-interface SessionData {
-  passport?: {
-    user?: {
-      id: string;
-      username: string;
-    };
-  };
-}
-
-// Extend IncomingMessage to include session
-interface AuthenticatedRequest extends IncomingMessage {
-  session?: SessionData;
-}
-
+import { sessionMiddleware } from 'src/middlewares/session';
+import * as passport from 'passport';
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -45,67 +31,59 @@ export class EventsGateway
   private readonly logger = new Logger(EventsGateway.name);
 
   constructor() {
-    game.on('playerUnblocked', this.handlePlayerUnblocked);
-    game.on('stateChange', this.handleStateChange);
+    game.on('gameState', this.handleGameState);
+
+    game.init();
   }
 
   afterInit() {
+    this.server.engine.use(sessionMiddleware);
+    this.server.engine.use(passport.session());
     this.logger.log('Initialized');
   }
 
-  getClientId(client: Socket): string {
-    // Try to get user from session
-    const request = client.request as AuthenticatedRequest;
-    const session = request.session;
-    if (session?.passport?.user?.id) {
-      return session.passport.user.id;
-    }
-
-    // Fallback to device_id for anonymous users
-    const cookiesArr = (client.handshake.headers.cookie || '').split(';');
-    const cookies = cookiesArr.reduce((acc, cur) => {
-      const [key, value] = cur.split('=');
-      acc[(key || '').trim()] = (value || '').trim();
-      return acc;
-    }, {});
-
-    const deviceId = cookies['device_id'] as string;
-    return deviceId || client.id;
+  getClientId(user: Express.User): string {
+    return user.id;
   }
 
-  getClientUsername(client: Socket): string {
-    // Try to get user from session
-    const request = client.request as AuthenticatedRequest;
-    const session = request.session;
-    if (session?.passport?.user?.username) {
-      return session.passport.user.username;
-    }
-
-    return `Player ${client.id.slice(0, 6)}`;
+  getClientUsername(user: Express.User): string {
+    return user.username;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handleConnection(@ConnectedSocket() client: Socket, ...args: any[]) {
+    const user = client.request.user;
+
+    if (!user) {
+      client.disconnect();
+
+      return;
+    }
+
     const { sockets } = this.server.sockets;
-    const clientId = this.getClientId(client);
-    const username = this.getClientUsername(client);
+    const clientId = this.getClientId(user);
+    const username = this.getClientUsername(user);
 
-    game.addPlayer(clientId);
+    const player = game.addPlayer(clientId);
 
-    // Update player name if authenticated
-    const player = game.findPlayerById(clientId);
     if (player) {
       player.name = username;
     }
 
     this.server.emit('gameState', game.getState());
-
+    client.emit('clientId', clientId);
     this.logger.log(`Client id: ${clientId} (${username}) connected`);
     this.logger.debug(`Number of connected clients: ${sockets.size}`);
   }
 
   handleDisconnect(@ConnectedSocket() client: Socket) {
-    const clientId = this.getClientId(client);
+    const user = client.request.user;
+
+    if (!user) {
+      return;
+    }
+
+    const clientId = this.getClientId(user);
     game.removePlayer(clientId);
     this.logger.log(`Client id: ${clientId} disconnected`);
   }
@@ -124,25 +102,37 @@ export class EventsGateway
   }
 
   @SubscribeMessage('move')
-  move(@ConnectedSocket() client: Socket) {
-    const clientId = this.getClientId(client);
-    const username = this.getClientUsername(client);
+  move(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    const user = client.request.user;
+
+    if (!user) {
+      client.disconnect();
+
+      return;
+    }
+
+    const clientId = this.getClientId(user);
+    const username = this.getClientUsername(user);
 
     this.server.emit('playerMove', `${username} moved!`);
-    return game.move(clientId);
+    return game.move(clientId, data);
   }
 
   @SubscribeMessage('playerReady')
   ready(@ConnectedSocket() client: Socket) {
-    const clientId = this.getClientId(client);
+    const user = client.request.user;
+
+    if (!user) {
+      client.disconnect();
+
+      return;
+    }
+
+    const clientId = this.getClientId(user);
     return game.playerReady(clientId);
   }
 
-  handlePlayerUnblocked = () => {
-    this.server.emit('handlePlayerUnblocked');
-  };
-
-  handleStateChange = (data) => {
-    this.server.emit('stateChange', data);
+  handleGameState = (data) => {
+    this.server.emit('gameState', data);
   };
 }
