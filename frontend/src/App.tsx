@@ -56,13 +56,20 @@ export function App() {
   return (
     <div className="container-fluid bg-dark text-white min-vh-100">
       <div className="container py-4">
-        <h1 className="text-center mb-4">🎯 Dobble Game</h1>
+        <div className="d-flex align-items-center justify-content-between mb-4 px-3">
+          <h1 className="mb-0">🎯 Dobble Game</h1>
+          {currentUser && (
+            <button
+              onClick={handleLogout}
+              className="btn btn-outline-danger ms-3"
+            >
+              Logout
+            </button>
+          )}
+        </div>
 
         {currentUser ? (
-          <GameSection
-            currentUser={currentUser}
-            onLogout={handleLogout}
-          />
+          <GameSection />
         ) : (
           <AuthSection onLogin={handleLogin} />
         )}

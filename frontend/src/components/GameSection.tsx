@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import type { User } from '../types/auth';
 import { CurrentTurnButtons } from './CurrentTurnButtons';
-
-interface GameSectionProps {
-  currentUser: User;
-  onLogout: () => void;
-}
 
 interface GameState {
   players: Array<{
@@ -25,7 +19,7 @@ interface GameState {
   };
 }
 
-export function GameSection({ currentUser, onLogout }: GameSectionProps) {
+export function GameSection() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -49,22 +43,6 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
     return () => clearTimeout(timeoutId);
   }, [hasTimeoutDate, maxTimeoutMs])
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (socket) {
-        socket.disconnect();
-      }
-      onLogout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
   const handleReady = () => {
     if (socket) {
       socket.emit('playerReady');
@@ -72,7 +50,6 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
   };
 
   const handleLetterClick = (letter: string) => {
-    console.log('Selected letter:', letter);
     if (socket) {
       socket.emit('move', letter);
     }
@@ -134,20 +111,6 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
   return (
     <div className="row">
       <div className="col-12">
-        {/* User Info */}
-        <div className="card bg-dark border-secondary mb-4">
-          <div className="card-body d-flex justify-content-between align-items-center">
-            <strong>Welcome, {currentUser.username}!</strong>
-            <button
-              onClick={handleLogout}
-              className="btn btn-outline-danger"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {/* Game Controls */}
         <div className="card bg-dark border-secondary mb-4">
           <div className="card-body">
             <h2 className="h4 mb-3">Game Controls</h2>
@@ -175,7 +138,7 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
           <>
             <div className="card bg-dark border-secondary mb-4">
               <div className="card-body">
-                <h2 className="h4 mb-3">Dealt Hand</h2>
+                <h2 className="h4 mb-3">Current Turn</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
                     isDisabled={isTimedOut}
@@ -188,7 +151,7 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
 
             <div className="card bg-dark border-secondary mb-4">
               <div className="card-body">
-                <h2 className="h4 mb-3">Current Turn</h2>
+                <h2 className="h4 mb-3">Dealt Hand</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
                     isDisabled={isTimedOut}
