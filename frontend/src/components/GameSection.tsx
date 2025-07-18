@@ -165,36 +165,41 @@ export function GameSection({ currentUser, onLogout }: GameSectionProps) {
                 </span>
               </div>
             </div>
+            {(isReady && gameState?.state === 'WAITING_FOR_PLAYERS') && (
+              <div className="mt-3 text-warning">Waiting for other players</div>
+            )}
           </div>
         </div>
 
-        {/* Dealt Hand */}
-        <div className="card bg-dark border-secondary mb-4">
-          <div className="card-body">
-            <h2 className="h4 mb-3">Dealt Hand</h2>
-            <div className="d-flex gap-2">
-              <CurrentTurnButtons
-                isDisabled={isTimedOut}
-                letters={gameState?.currentTurn ?? []}
-                onLetterClick={handleLetterClick}
-              />
+        {isReady && gameState?.state !== 'WAITING_FOR_PLAYERS' ? (
+          <>
+            <div className="card bg-dark border-secondary mb-4">
+              <div className="card-body">
+                <h2 className="h4 mb-3">Dealt Hand</h2>
+                <div className="d-flex gap-2">
+                  <CurrentTurnButtons
+                    isDisabled={isTimedOut}
+                    letters={gameState?.currentTurn ?? []}
+                    onLetterClick={handleLetterClick}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Current Turn */}
-        <div className="card bg-dark border-secondary mb-4">
-          <div className="card-body">
-            <h2 className="h4 mb-3">Current Turn</h2>
-            <div className="d-flex gap-2">
-              <CurrentTurnButtons
-                isDisabled={isTimedOut}
-                letters={currentPlayer?.hand ?? []}
-                onLetterClick={handleLetterClick}
-              />
+            <div className="card bg-dark border-secondary mb-4">
+              <div className="card-body">
+                <h2 className="h4 mb-3">Current Turn</h2>
+                <div className="d-flex gap-2">
+                  <CurrentTurnButtons
+                    isDisabled={isTimedOut}
+                    letters={currentPlayer?.hand ?? []}
+                    onLetterClick={handleLetterClick}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
