@@ -133,7 +133,6 @@ export function GameSection() {
       <div className="col-12">
         <div className="card bg-dark border-secondary mb-4">
           <div className="card-body">
-            <h2 className="h4 mb-3">Game Controls</h2>
             <div className="d-flex gap-2">
               <button
                 onClick={handleReady}
@@ -163,38 +162,28 @@ export function GameSection() {
           </div>
         </div>
 
-        {isReady && gameState?.state !== 'WAITING_FOR_PLAYERS' ? (
+        {isReady && !['WAITING_FOR_PLAYERS', 'RESULTS'].includes(gameState?.state || '')  ? (
           <>
-            <div className="card bg-dark border-secondary mb-4">
-              <div className="card-body">
-                <h2 className="h4 mb-3">Current Turn</h2>
-                <div className="d-flex gap-2">
-                  <CurrentTurnButtons
-                    key={gameHand.join('')}
-                    type="gameHand"
-                    isDisabled={isTimedOut}
-                    selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
-                    letters={gameHand}
-                    onLetterClick={handleLetterClick}
-                  />
-                </div>
-              </div>
+            <div className="mb-4">
+              <CurrentTurnButtons
+                key={gameHand.join('')}
+                type="gameHand"
+                isDisabled={isTimedOut}
+                selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
+                letters={gameHand}
+                onLetterClick={handleLetterClick}
+              />
             </div>
 
-            <div className="card bg-dark border-secondary mb-4">
-              <div className="card-body">
-                <h2 className="h4 mb-3">Dealt Hand</h2>
-                <div className="d-flex gap-2">
-                  <CurrentTurnButtons
-                    key={playerHand.join('')}
-                    type="playerHand"
-                    selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
-                    isDisabled={isTimedOut}
-                    letters={playerHand}
-                    onLetterClick={handleLetterClick}
-                  />
-                </div>
-              </div>
+            <div className="">
+              <CurrentTurnButtons
+                key={playerHand.join('')}
+                type="playerHand"
+                selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
+                isDisabled={isTimedOut}
+                letters={playerHand}
+                onLetterClick={handleLetterClick}
+              />
             </div>
           </>
         ) : null}

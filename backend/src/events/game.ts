@@ -3,6 +3,7 @@ import * as EventEmitter from 'node:events';
 const MIN_PLAYERS_TO_PLAY = 1;
 const MAX_TIMEOUT_MS = 2000;
 const MAX_PLAYER_TURNS = 2;
+const ICONS_COUNT = 8;
 
 enum Turn {
   ANCHOR = 'anchor',
@@ -92,12 +93,12 @@ type GameState = {
   };
 };
 
-function getGameHand(count: number = 6): Turn[] {
+function getGameHand(count: number = ICONS_COUNT): Turn[] {
   const shuffled = turnValues.toSorted(() => 0.5 - Math.random());
   return shuffled.slice(0, count) as Turn[];
 }
 
-function getPlayerHand(gameHand: Turn[], count: number = 6): Turn[] {
+function getPlayerHand(gameHand: Turn[], count: number = ICONS_COUNT): Turn[] {
   const shuffledGameHand = gameHand.toSorted(() => 0.5 - Math.random());
   const shuffled = turnValues.toSorted(() => 0.5 - Math.random());
   const res = [shuffledGameHand[0]];
