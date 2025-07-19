@@ -1,8 +1,8 @@
 import * as EventEmitter from 'node:events';
 
-const MIN_PLAYERS_TO_PLAY = 2;
+const MIN_PLAYERS_TO_PLAY = 1;
 const MAX_TIMEOUT_MS = 2000;
-const MAX_PLAYER_TURNS = 27;
+const MAX_PLAYER_TURNS = 2;
 
 enum Turn {
   A = 'A',
@@ -111,6 +111,8 @@ class Game extends EventEmitter {
 
     this.resetPlayers();
 
+    this.sendGameState();
+
     if (this.canStartGame()) {
       this.prepareInitialRound();
     }
@@ -156,7 +158,9 @@ class Game extends EventEmitter {
     }
   }
 
-  move(id: string, data: Turn[]) {
+  move(id: string, data: string[]) {
+    const turns = data as Turn[];
+
     if (this.state.state !== 'WAIT_FOR_PLAYER_MOVE') {
       return;
     }
@@ -173,7 +177,7 @@ class Game extends EventEmitter {
 
     this.removeTimeoutFromPlayer(player);
 
-    if (!this.isCorrectMove(player, data)) {
+    if (!this.isCorrectMove(player, turns)) {
       this.addTimeoutToPlayer(player);
       this.sendGameState();
 
@@ -250,7 +254,7 @@ class Game extends EventEmitter {
   }
 
   private resetPlayers() {
-    this.state.players.forEach((player) => ({
+    this.state.players = this.state.players.map((player) => ({
       ...initialPlayerData,
       id: player.id,
       name: player.name,

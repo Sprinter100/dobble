@@ -7,10 +7,7 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  WsResponse,
 } from '@nestjs/websockets';
-import { from, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { Server, Socket } from 'socket.io';
 import { game } from './game';
 import { Logger } from '@nestjs/common';
@@ -32,14 +29,14 @@ export class EventsGateway
 
   constructor() {
     game.on('gameState', this.handleGameState);
-
-    game.init();
   }
 
   afterInit() {
     this.server.engine.use(sessionMiddleware);
     this.server.engine.use(passport.session());
     this.logger.log('Initialized');
+
+    game.init();
   }
 
   getClientId(user: Express.User): string {
@@ -88,21 +85,13 @@ export class EventsGateway
     this.logger.log(`Client id: ${clientId} disconnected`);
   }
 
-  @SubscribeMessage('events')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  findAll(@MessageBody() data: any): Observable<WsResponse<number>> {
-    return from([1, 2, 3]).pipe(
-      map((item) => ({ event: 'events', data: item })),
-    );
-  }
-
   @SubscribeMessage('identity')
   async identity(@MessageBody() data: number): Promise<number> {
     return Promise.resolve(data);
   }
 
   @SubscribeMessage('move')
-  move(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+  move(@MessageBody() data: string[], @ConnectedSocket() client: Socket) {
     const user = client.request.user;
 
     if (!user) {
@@ -130,6 +119,19 @@ export class EventsGateway
 
     const clientId = this.getClientId(user);
     return game.playerReady(clientId);
+  }
+
+  @SubscribeMessage('newGame')
+  newGame(@ConnectedSocket() client: Socket) {
+    const user = client.request.user;
+
+    if (!user) {
+      client.disconnect();
+
+      return;
+    }
+
+    return game.init();
   }
 
   handleGameState = (data) => {

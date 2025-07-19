@@ -30,7 +30,7 @@ export function GameSection() {
 
   const maxTimeoutMs = gameState?.meta.maxTimeoutMs || 0;
   const currentPlayer = gameState?.players.find((player) => player.id === clentId);
-  const hasTimeoutDate = !!currentPlayer?.timeoutDate && Date.now() - currentPlayer?.timeoutDate < maxTimeoutMs;
+  const hasTimeoutDate = !!currentPlayer?.timeoutDate && (Date.now() - currentPlayer?.timeoutDate < maxTimeoutMs);
   const isReady = currentPlayer?.isReady;
 
   useEffect(() => {
@@ -48,6 +48,12 @@ export function GameSection() {
   const handleReady = () => {
     if (socket) {
       socket.emit('playerReady');
+    }
+  };
+
+  const handleNewGame = () => {
+    if (socket) {
+      socket.emit('newGame');
     }
   };
 
@@ -133,6 +139,15 @@ export function GameSection() {
               >
                 Ready
               </button>
+              {gameState?.state === 'RESULTS' && (
+                <button
+                  onClick={handleNewGame}
+                  className="btn btn-primary"
+                  disabled={!isConnected}
+                >
+                  New Game
+                </button>
+              )}
               <div className="ms-auto">
                 <span className={`badge ${isConnected ? 'bg-success' : 'bg-danger'}`}>
                   {isConnected ? 'Connected' : 'Disconnected'}
