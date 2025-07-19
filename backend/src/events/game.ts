@@ -93,13 +93,13 @@ type GameState = {
 };
 
 function getGameHand(count: number = 6): Turn[] {
-  const shuffled = turnValues.sort(() => 0.5 - Math.random());
+  const shuffled = turnValues.toSorted(() => 0.5 - Math.random());
   return shuffled.slice(0, count) as Turn[];
 }
 
 function getPlayerHand(gameHand: Turn[], count: number = 6): Turn[] {
   const shuffledGameHand = gameHand.toSorted(() => 0.5 - Math.random());
-  const shuffled = turnValues.sort(() => 0.5 - Math.random());
+  const shuffled = turnValues.toSorted(() => 0.5 - Math.random());
   const res = [shuffledGameHand[0]];
 
   let idx = 0;
@@ -107,14 +107,14 @@ function getPlayerHand(gameHand: Turn[], count: number = 6): Turn[] {
   while (res.length < count) {
     const el = shuffled[idx];
 
-    if (!res.includes(el)) {
+    if (!shuffledGameHand.includes(el)) {
       res.push(el);
     }
 
     idx++;
   }
 
-  return res;
+  return res.toSorted(() => 0.5 - Math.random());
 }
 
 const initialPlayerData: Player = {
