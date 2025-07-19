@@ -25,6 +25,8 @@ export function GameSection() {
   const [isConnected, setIsConnected] = useState(false);
   const [clentId, setClientid] = useState('');
   const [isTimedOut, setIsTimedOut] = useState(false);
+  const [firstSelectedHandType, setFirstSelectedHandType] = useState('');
+  const [firstSelectedLetter, setFirstSelectedLetter] = useState('');
 
   const maxTimeoutMs = gameState?.meta.maxTimeoutMs || 0;
   const currentPlayer = gameState?.players.find((player) => player.id === clentId);
@@ -49,9 +51,18 @@ export function GameSection() {
     }
   };
 
-  const handleLetterClick = (letter: string) => {
+  const handleLetterClick = (handType: string, letter: string) => {
+    if (!firstSelectedHandType || handType === firstSelectedHandType) {
+      setFirstSelectedHandType(handType);
+      setFirstSelectedLetter(letter);
+
+      return;
+    }
+
     if (socket) {
-      socket.emit('move', letter);
+      socket.emit('move', firstSelectedLetter, letter);
+      setFirstSelectedHandType('');
+      setFirstSelectedLetter('');
     }
   }
 
@@ -141,7 +152,9 @@ export function GameSection() {
                 <h2 className="h4 mb-3">Current Turn</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
+                    type="gameHand"
                     isDisabled={isTimedOut}
+                    selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
                     letters={gameState?.currentTurn ?? []}
                     onLetterClick={handleLetterClick}
                   />
@@ -154,6 +167,8 @@ export function GameSection() {
                 <h2 className="h4 mb-3">Dealt Hand</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
+                    type="playerHand"
+                    selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
                     isDisabled={isTimedOut}
                     letters={currentPlayer?.hand ?? []}
                     onLetterClick={handleLetterClick}

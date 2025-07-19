@@ -156,7 +156,7 @@ class Game extends EventEmitter {
     }
   }
 
-  move(id: string, data: Turn) {
+  move(id: string, data: Turn[]) {
     if (this.state.state !== 'WAIT_FOR_PLAYER_MOVE') {
       return;
     }
@@ -208,8 +208,14 @@ class Game extends EventEmitter {
     return player.turns <= 0;
   }
 
-  private isCorrectMove(player: Player, data: Turn) {
-    return player.hand.includes(data) && this.state.currentTurn.includes(data);
+  private isCorrectMove(player: Player, data: Turn[]) {
+    const turn = data[0];
+
+    return (
+      data[0] === data[1] &&
+      player.hand.includes(turn) &&
+      this.state.currentTurn.includes(turn)
+    );
   }
 
   private prepareInitialRound() {
