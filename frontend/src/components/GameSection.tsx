@@ -125,6 +125,9 @@ export function GameSection() {
     setClientid(clientId)
   }
 
+  const gameHand = gameState?.currentTurn ?? [];
+  const playerHand = currentPlayer?.hand ?? [];
+
   return (
     <div className="row">
       <div className="col-12">
@@ -167,10 +170,11 @@ export function GameSection() {
                 <h2 className="h4 mb-3">Current Turn</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
+                    key={gameHand.join('')}
                     type="gameHand"
                     isDisabled={isTimedOut}
                     selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
-                    letters={gameState?.currentTurn ?? []}
+                    letters={gameHand}
                     onLetterClick={handleLetterClick}
                   />
                 </div>
@@ -182,10 +186,11 @@ export function GameSection() {
                 <h2 className="h4 mb-3">Dealt Hand</h2>
                 <div className="d-flex gap-2">
                   <CurrentTurnButtons
+                    key={playerHand.join('')}
                     type="playerHand"
                     selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
                     isDisabled={isTimedOut}
-                    letters={currentPlayer?.hand ?? []}
+                    letters={playerHand}
                     onLetterClick={handleLetterClick}
                   />
                 </div>
