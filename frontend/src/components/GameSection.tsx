@@ -178,6 +178,40 @@ export function GameSection() {
             </div>
           </>
         ) : null}
+
+        {isReady && gameState?.state === 'RESULTS' ? (
+          <div className="card bg-dark border-secondary mb-4">
+            <div className="card-body">
+              <h2 className="h4 mb-3">Game Results</h2>
+              {(() => {
+                const currentPlayerTurns = currentPlayer?.turns ?? 0;
+                const otherPlayers = gameState?.players.filter(player => player.id !== clentId) ?? [];
+                const isWinner = currentPlayerTurns === 0 && otherPlayers.every(player => player.turns > 0);
+
+                return (
+                  <>
+                    <div className={`alert ${isWinner ? 'alert-success' : 'alert-danger'} mb-3 bg-dark border-secondary`}>
+                      <h5 className="alert-heading text-light text-center mb-0">
+                        {isWinner ? '🎉 You Won! 🎉' : '😔 Game Over - You Lost'}
+                      </h5>
+                    </div>
+
+                    <div className="mt-3">
+                      <h6>Other Players:</h6>
+                      <ul className="list-group list-group-flush bg-transparent">
+                        {otherPlayers.map((player) => (
+                          <li key={player.id} className="list-group-item bg-transparent text-light border-secondary">
+                            <strong>{player.name}</strong>: {player.turns} turns remaining
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
