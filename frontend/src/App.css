@@ -72,3 +72,8 @@ h1, h2, h3, h4, h5, h6 {
     padding-right: 0 !important;
   }
 }
+
+.btn:not(.btn-primary):hover {
+  background-color: inherit !important;
+  color: inherit !important;
+}

@@ -70,7 +70,7 @@ const turnValues = Object.values(Turn);
 type Player = {
   id: string;
   name: string;
-  timeoutDate: number;
+  isTimedOut: boolean;
   turns: number;
   hand: Turn[];
   isReady: boolean;
@@ -88,7 +88,6 @@ type GameState = {
   players: Player[];
   currentTurn: Turn[];
   meta: {
-    maxTimeoutMs: number;
     maxPlayerTurns: number;
   };
 };
@@ -121,7 +120,7 @@ function getPlayerHand(gameHand: Turn[], count: number = ICONS_COUNT): Turn[] {
 const initialPlayerData: Player = {
   id: '',
   name: '',
-  timeoutDate: 0,
+  isTimedOut: false,
   turns: MAX_PLAYER_TURNS,
   isReady: false,
   hand: [],
@@ -133,7 +132,6 @@ class Game extends EventEmitter {
     players: [],
     currentTurn: [],
     meta: {
-      maxTimeoutMs: MAX_TIMEOUT_MS,
       maxPlayerTurns: MAX_PLAYER_TURNS,
     },
   };
@@ -206,8 +204,6 @@ class Game extends EventEmitter {
     if (this.isPlayerTimedOut(player)) {
       return;
     }
-
-    this.removeTimeoutFromPlayer(player);
 
     if (!this.isCorrectMove(player, turns)) {
       this.addTimeoutToPlayer(player);
@@ -305,17 +301,19 @@ class Game extends EventEmitter {
   }
 
   private isPlayerTimedOut(player: Player) {
-    return (
-      !!player.timeoutDate && Date.now() - player.timeoutDate < MAX_TIMEOUT_MS
-    );
+    return player.isTimedOut;
   }
 
   private addTimeoutToPlayer(player: Player) {
-    player.timeoutDate = Date.now();
+    player.isTimedOut = true;
+
+    setTimeout(() => this.removeTimeoutFromPlayer(player), MAX_TIMEOUT_MS);
   }
 
   private removeTimeoutFromPlayer(player: Player) {
-    player.timeoutDate = 0;
+    player.isTimedOut = false;
+
+    this.sendGameState();
   }
 
   private sendGameState = () => {

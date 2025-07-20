@@ -2,19 +2,20 @@ import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { CurrentTurnButtons } from './CurrentTurnButtons';
 
+type Player = {
+  id: string;
+  name: string;
+  hand: string[];
+  isReady: boolean;
+  turns: number;
+  isTimedOut: boolean;
+};
+
 interface GameState {
-  players: Array<{
-    id: string;
-    name: string;
-    hand: string[];
-    isReady: boolean;
-    turns: number;
-    timeoutDate: number;
-  }>;
+  players: Player[];
   currentTurn: string[];
   state: string;
   meta: {
-    maxTimeoutMs: number;
     maxPlayerTurns: number;
   };
 }
@@ -24,26 +25,11 @@ export function GameSection() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [clentId, setClientid] = useState('');
-  const [isTimedOut, setIsTimedOut] = useState(false);
   const [firstSelectedHandType, setFirstSelectedHandType] = useState('');
   const [firstSelectedLetter, setFirstSelectedLetter] = useState('');
 
-  const maxTimeoutMs = gameState?.meta.maxTimeoutMs || 0;
   const currentPlayer = gameState?.players.find((player) => player.id === clentId);
-  const hasTimeoutDate = !!currentPlayer?.timeoutDate && (Date.now() - currentPlayer?.timeoutDate < maxTimeoutMs);
   const isReady = currentPlayer?.isReady;
-
-  useEffect(() => {
-    let timeoutId: number;
-
-    if (hasTimeoutDate) {
-      setIsTimedOut(true);
-
-      timeoutId = setTimeout(() => setIsTimedOut(false), maxTimeoutMs);
-    }
-
-    return () => clearTimeout(timeoutId);
-  }, [hasTimeoutDate, maxTimeoutMs])
 
   const handleReady = () => {
     if (socket) {
@@ -168,7 +154,7 @@ export function GameSection() {
               <CurrentTurnButtons
                 key={gameHand.join('')}
                 type="gameHand"
-                isDisabled={isTimedOut}
+                isDisabled={currentPlayer.isTimedOut}
                 selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
                 letters={gameHand}
                 onLetterClick={handleLetterClick}
@@ -180,7 +166,7 @@ export function GameSection() {
                 key={playerHand.join('')}
                 type="playerHand"
                 selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
-                isDisabled={isTimedOut}
+                isDisabled={currentPlayer.isTimedOut}
                 letters={playerHand}
                 onLetterClick={handleLetterClick}
               />

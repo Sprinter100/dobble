@@ -46,7 +46,7 @@ export function CurrentTurnButtons({ type, letters, selectedLetter, isDisabled, 
   const paramsKey = letters.join('');
 
   if (!savedParams[paramsKey]) {
-    savedParams[paramsKey] = [`rotate(${getRandomInt(-29, 290)}deg)`, getRandomInt(0, 1)]
+    savedParams[paramsKey] = [`rotate(${getRandomInt(-290, 290)}deg)`, getRandomInt(0, 1)]
   }
 
   const [rotate, transformPresetNum] = savedParams[paramsKey];
@@ -81,7 +81,6 @@ export function CurrentTurnButtons({ type, letters, selectedLetter, isDisabled, 
               width: '60px',
               height: '60px',
               padding: 0,
-              // background: 'black',
               border: 'none',
               boxShadow: isLetterSeleted ? '0 0 0 2px #0d6efd' : undefined,
               transform: transformPreset[index]
