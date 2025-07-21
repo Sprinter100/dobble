@@ -1,5 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+
+const env = loadEnv('', process.cwd());
+
+console.log(env.VITE_BACKEND_HOST)
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,11 +12,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/auth': {
-        target: 'http://localhost:3300',
+        target: env.VITE_BACKEND_HOST,
         changeOrigin: true
       },
       '/socket.io': {
-        target: 'http://localhost:3300',
+        target: env.VITE_BACKEND_HOST,
         changeOrigin: true,
         ws: true
       }
