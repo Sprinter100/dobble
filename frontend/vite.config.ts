@@ -9,7 +9,7 @@ console.log(env.VITE_BACKEND_HOST)
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: Number(env.VITE_BACKEND_PORT) || undefined,
     proxy: {
       '/auth': {
         target: env.VITE_BACKEND_HOST,
