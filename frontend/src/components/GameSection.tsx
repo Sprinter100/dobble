@@ -152,7 +152,6 @@ export function GameSection() {
           <>
             <div className="mb-4">
               <CurrentTurnButtons
-                key={gameHand.join('')}
                 type="gameHand"
                 isDisabled={currentPlayer.isTimedOut}
                 selectedLetter={firstSelectedHandType === "gameHand" ?  firstSelectedLetter : undefined}
@@ -163,7 +162,6 @@ export function GameSection() {
 
             <div className="">
               <CurrentTurnButtons
-                key={playerHand.join('')}
                 type="playerHand"
                 selectedLetter={firstSelectedHandType === "playerHand" ?  firstSelectedLetter : undefined}
                 isDisabled={currentPlayer.isTimedOut}

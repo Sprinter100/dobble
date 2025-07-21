@@ -1,8 +1,8 @@
 import * as EventEmitter from 'node:events';
 
-const MIN_PLAYERS_TO_PLAY = 1;
-const MAX_TIMEOUT_MS = 2000;
-const MAX_PLAYER_TURNS = 2;
+const MIN_PLAYERS_TO_PLAY = 2;
+const MAX_TIMEOUT_MS = 1000;
+const MAX_PLAYER_TURNS = 27;
 const ICONS_COUNT = 8;
 
 enum Turn {

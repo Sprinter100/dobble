@@ -1,6 +1,9 @@
 import cn from 'classnames';
 import { getRandomInt } from '../helpers/randomNumber';
 
+import './CurrentTurnButtons.css';
+import { useEffect, useState } from 'react';
+
 interface CurrentTurnButtonsProps {
   type: string;
   isDisabled?: boolean;
@@ -35,6 +38,20 @@ const transformPresets = [
 const savedParams: Record<string, [string, number]> = {};
 
 export function CurrentTurnButtons({ type, letters, selectedLetter, isDisabled, onLetterClick }: CurrentTurnButtonsProps) {
+  const [showAnimation, setShowAnimation] = useState('');
+
+  const lettersKey = letters.join('');
+
+  useEffect(() => {
+    setShowAnimation('green-fade-animation')
+  }, [lettersKey])
+
+  useEffect(() => {
+    if (isDisabled) {
+      setShowAnimation('shake-animation')
+    }
+  }, [isDisabled])
+
   if (!letters || letters.length === 0) {
     return (
       <div className="text-muted">
@@ -43,18 +60,17 @@ export function CurrentTurnButtons({ type, letters, selectedLetter, isDisabled, 
     );
   }
 
-  const paramsKey = letters.join('');
-
-  if (!savedParams[paramsKey]) {
-    savedParams[paramsKey] = [`rotate(${getRandomInt(-290, 290)}deg)`, getRandomInt(0, 1)]
+  if (!savedParams[lettersKey]) {
+    savedParams[lettersKey] = [`rotate(${getRandomInt(-290, 290)}deg)`, getRandomInt(0, 1)]
   }
 
-  const [rotate, transformPresetNum] = savedParams[paramsKey];
+  const [rotate, transformPresetNum] = savedParams[lettersKey];
   const transformPreset = transformPresets[transformPresetNum];
 
   return (
     <div
-      className="d-flex flex-wrap gap-2 align-items-center justify-content-center"
+      className={cn(showAnimation)}
+      onAnimationEnd={() => setShowAnimation('')}
       style={{
         background: '#fff',
         borderRadius: '50%',
@@ -62,44 +78,53 @@ export function CurrentTurnButtons({ type, letters, selectedLetter, isDisabled, 
         width: '320px',
         height: '320px',
         margin: '0 auto',
-        position: 'relative',
-        transform: rotate,
+        overflow: 'hidden',
       }}
     >
-      {letters.map((letter, index) => {
-        const isLetterSeleted = selectedLetter === letter;
-        const imageSrc = `/png/${letter}.png`;
+      <div
+        className={cn('d-flex flex-wrap gap-2 align-items-center justify-content-center')}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transform: rotate,
+        }}
+      >
+        {letters.map((letter, index) => {
+          const isLetterSeleted = selectedLetter === letter;
+          const imageSrc = `/png/${letter}.png`;
 
-        return (
-          <button
-            key={`${letter}-${index}`}
-            disabled={isDisabled}
-            className={cn("btn btn-lg p-0 d-flex align-items-center justify-content-center", { 'btn-primary': isLetterSeleted, 'btn-outline-primary': !isLetterSeleted })}
-            onClick={() => onLetterClick(type, letter)}
-            style={{
-              position: 'absolute',
-              width: '60px',
-              height: '60px',
-              padding: 0,
-              border: 'none',
-              boxShadow: isLetterSeleted ? '0 0 0 2px #0d6efd' : undefined,
-              transform: transformPreset[index]
-            }}
-          >
-            <img
-              src={imageSrc}
-              alt={letter}
+          return (
+            <button
+              key={`${letter}-${index}`}
+              disabled={isDisabled}
+              className={cn("btn btn-lg p-0 d-flex align-items-center justify-content-center", { 'btn-primary': isLetterSeleted, 'btn-outline-primary': !isLetterSeleted })}
+              onClick={() => onLetterClick(type, letter)}
               style={{
-                width: "100%",
-                height: '100%',
-                objectFit: 'contain',
-                filter: isDisabled ? 'grayscale(80%) opacity(0.5)' : 'none',
-                transition: 'filter 0.2s',
+                position: 'absolute',
+                width: '60px',
+                height: '60px',
+                padding: 0,
+                border: 'none',
+                boxShadow: isLetterSeleted ? '0 0 0 2px #0d6efd' : undefined,
+                transform: transformPreset[index]
               }}
-            />
-          </button>
-        )
-      })}
+            >
+              <img
+                src={imageSrc}
+                alt={letter}
+                style={{
+                  width: "100%",
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: isDisabled ? 'grayscale(80%) opacity(0.5)' : 'none',
+                  transition: 'filter 0.2s',
+                }}
+              />
+            </button>
+          )
+        })}
+      </div>
     </div>
   );
 }

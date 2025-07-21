@@ -1,0 +1,41 @@
+@keyframes redToTransparent {
+  0% {
+    background-color: rgba(255, 0, 0, 0.5);
+  }
+  100% {
+    background-color: white;
+  }
+}
+
+@keyframes greenToTransparent {
+  0% {
+    background-color: rgba(0, 128, 0, 0.5);
+  }
+  100% {
+    background-color: white;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.red-fade-animation {
+  animation: redToTransparent 0.5s ease-out forwards;
+}
+
+.green-fade-animation {
+  animation: greenToTransparent 0.5s ease-out forwards;
+}
+
+.shake-animation {
+  animation: shake 0.5s ease-in-out;
+}
