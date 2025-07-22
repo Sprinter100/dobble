@@ -8,6 +8,10 @@ console.log(env.VITE_BACKEND_HOST)
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: '../backend/public',
+    emptyOutDir: true,
+  },
   server: {
     port: Number(env.VITE_BACKEND_PORT) || undefined,
     proxy: {
